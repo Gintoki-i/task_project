@@ -1,0 +1,105 @@
+{% extends 'TaskHelper/base.html' %}
+{% load static %}
+
+{% block title %}月排行{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">首页</a></li>
+    <li class="breadcrumb-item active" aria-current="page">月排行</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<h2>🏆 本月排行（{{ start_date }} ~ {{ end_date }}）</h2>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  .collapse-body {
+    transition: height 0.4s ease;
+    overflow: hidden;
+  }
+  .collapse-body.show {
+    display: block !important;
+  }
+  .collapse-body:not(.show) {
+    display: none !important;
+  }
+</style>
+
+<div class="table-responsive mt-4">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>排名</th>
+        <th>员工</th>
+        <th>完成数</th>
+        <th>错误数</th>
+        <th>详情</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in ranking %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td class="d-flex align-items-center gap-2">
+            <a href="{% url 'employee_detail' employee_id=item.employee__id %}" class="d-flex align-items-center text-decoration-none text-dark gap-2">
+              <img src="{{ item.avatar_url }}" class="rounded-circle" width="40" height="40" alt="头像">
+              <span>{{ item.employee__name }}</span>
+            </a>
+          </td>
+          <td>{{ item.total_completed }}</td>
+          <td>{{ item.total_errors }}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-secondary"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#details-{{ forloop.counter }}">
+              查看
+            </button>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="5" class="p-0 border-0">
+            <div id="details-{{ forloop.counter }}" class="collapse collapse-body">
+              <div class="p-3 bg-light border-top">
+                <strong>📊 每日完成图表：</strong>
+                <canvas id="chart-{{ forloop.counter }}" height="100"></canvas>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <script>
+          document.addEventListener("DOMContentLoaded", function () {
+            const ctx = document.getElementById('chart-{{ forloop.counter }}').getContext('2d');
+            new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: {{ item.chart_labels|safe }},
+                datasets: [{
+                  label: '完成数',
+                  data: {{ item.chart_values|safe }},
+                  backgroundColor: 'rgba(75, 192, 192, 0.7)'
+                }]
+              },
+              options: {
+                responsive: true,
+                scales: {
+                  y: { beginAtZero: true }
+                },
+                plugins: {
+                  legend: { display: false }
+                }
+              }
+            });
+          });
+        </script>
+      {% empty %}
+        <tr><td colspan="5" class="text-center">暂无数据</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends 'TaskHelper/base.html' %}
+{% load static %}
+
+{% block title %}批量任务录入{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">📅 批量任务数据录入</h2>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+{% endif %}
+
+<div class="row">
+  <!-- 嵌入式日历容器 -->
+  <div class="col-lg-4 mb-4">
+{#    <label class="form-label">选择日期：</label>#}
+      <div class="mt-2">
+      <button type="button" class="btn btn-outline-primary btn-sm" onclick="goToToday()">📍 回到今日</button>
+    </div>
+    <div id="calendar-wrapper">
+      <div id="calendar"></div>
+    </div>
+  </div>
+
+  <!-- 批量录入表格 -->
+  <div class="col-lg-8">
+    <form method="post">
+      {% csrf_token %}
+      <div class="d-flex align-items-center mb-3">
+        <label class="form-label me-2 mb-0">当前录入日期：</label>
+        <input type="text" name="record_date" id="record-date" class="form-control form-control-sm w-auto" value="{{ selected_date }}">
+        <button type="submit" class="btn btn-success btn-sm ms-3">💾 提交</button>
+      </div>
+
+      <table class="table table-bordered table-sm">
+        <thead class="table-light">
+          <tr>
+            <th>员工</th>
+            <th>完成数</th>
+            <th>错误数</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in employees %}
+          <tr>
+            <td>{{ emp.name }}</td>
+            <td><input type="number" name="completed_{{ emp.id }}" class="form-control" min="0" placeholder="完成数"></td>
+            <td><input type="number" name="errors_{{ emp.id }}" class="form-control" min="0" placeholder="错误数"></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+  #calendar-wrapper {
+    width: 100%;
+    max-width: 320px;
+    min-height: 340px;
+    display: block;
+    position: relative;
+  }
+
+  #calendar {
+    padding: 10px;
+    border: 1px solid #ccc;
+    background: #fff;
+    border-radius: 6px;
+  }
+</style>
+{% endblock %}
+
+{% block extrascript %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
+
+<script>
+  let calendarInstance = null;
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const defaultDate = "{{ selected_date }}";
+    const highlightedDates = {{ highlighted_dates|safe }};
+
+    calendarInstance = flatpickr("#calendar", {
+      inline: true,
+      locale: "zh",
+      dateFormat: "Y-m-d",
+      defaultDate: defaultDate,
+      appendTo: document.getElementById("calendar"),
+      onChange: function (selectedDates) {
+        if (selectedDates.length > 0) {
+          const latest = selectedDates[selectedDates.length - 1].toISOString().split('T')[0];
+          document.getElementById("record-date").value = latest;
+        }
+      },
+      onReady: function (_, __, fp) {
+        const status = document.getElementById("calendar-status");
+        status.innerText = "✅";
+        status.classList.remove("text-danger");
+        status.classList.add("text-success");
+
+        highlightedDates.forEach(d => {
+          const el = fp.calendarContainer.querySelector(`[aria-label="${d}"]`);
+          if (el) el.style.backgroundColor = '#d1e7dd';
+        });
+      }
+    });
+
+    flatpickr("#record-date", {
+      locale: "zh",
+      dateFormat: "Y-m-d",
+      defaultDate: defaultDate
+    });
+  });
+
+
+  function goToToday() {
+    const today = new Date().toISOString().split('T')[0];
+    if (calendarInstance) {
+      calendarInstance.setDate(today, true);
+    }
+    document.getElementById("record-date").value = today;
+  }
+</script>
+{% endblock %}

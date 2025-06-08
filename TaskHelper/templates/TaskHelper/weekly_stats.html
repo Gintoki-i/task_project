@@ -1,0 +1,115 @@
+{#{% extends 'TaskHelper/base.html' %}#}
+{##}
+{#{% block title %}周统计{% endblock %}#}
+{##}
+{#{% block breadcrumbs %}#}
+{#<nav aria-label="breadcrumb">#}
+{#  <ol class="breadcrumb">#}
+{#    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">首页</a></li>#}
+{#    <li class="breadcrumb-item active" aria-current="page">周统计</li>#}
+{#  </ol>#}
+{#</nav>#}
+{#{% endblock %}#}
+{##}
+{#{% block content %}#}
+{#<h2>📊 周统计（{{ start_date }} ~ {{ end_date }}）</h2>#}
+{#<canvas id="weeklyChart" height="100"></canvas>#}
+{#<div class="mb-3">#}
+{#    <button class="btn btn-outline-primary btn-sm me-2" onclick="changeChartType('bar')">柱状图</button>#}
+{#    <button class="btn btn-outline-secondary btn-sm" onclick="changeChartType('line')">折线图</button>#}
+{#</div>#}
+{#<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>#}
+{#<script>#}
+{#    let chartType = 'bar';#}
+{#    const ctx = document.getElementById('weeklyChart').getContext('2d');#}
+{##}
+{#    const chartConfig = {#}
+{#        type: chartType,#}
+{#        data: {#}
+{#            labels: {{ labels|safe }},#}
+{#            datasets: [#}
+{#                {#}
+{#                    label: '完成数',#}
+{#                    data: {{ completed_data|safe }},#}
+{#                    backgroundColor: 'rgba(50,255,50,0.7)',#}
+{#                    borderColor: 'rgb(50,255,50)',#}
+{#                    fill: false#}
+{#                },#}
+{#                {#}
+{#                    label: '错误数',#}
+{#                    data: {{ error_data|safe }},#}
+{#                    backgroundColor: 'rgba(255,50,50,0.7)',#}
+{#                    borderColor: 'rgb(255,50,50)',#}
+{#                    fill: false#}
+{#                }#}
+{#            ]#}
+{#        },#}
+{#        options: {#}
+{#            responsive: true,#}
+{#            scales: {#}
+{#                y: { beginAtZero: true }#}
+{#            }#}
+{#        }#}
+{#    };#}
+{##}
+{#    let myChart = new Chart(ctx, chartConfig);#}
+{##}
+{#    function changeChartType(type) {#}
+{#        myChart.destroy();#}
+{#        chartConfig.type = type;#}
+{#        myChart = new Chart(ctx, chartConfig);#}
+{#    }#}
+{#</script>#}
+{#{% endblock %}#}
+
+
+{% extends 'TaskHelper/base.html' %}
+{% load range_tags %}
+
+{% block content %}
+<h3>📅 周统计（第 {{ week }} 周 : {{ start_date }} ~ {{ end_date }}）</h3>
+
+<!-- 筛选表单 -->
+<form method="get" id="weekForm" class="d-flex gap-2 mb-4">
+  <select name="year" class="form-select w-auto" onchange="document.getElementById('weekForm').submit()">
+    {% for y in 2022|to:2025 %}
+      <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="week" class="form-select w-auto" onchange="document.getElementById('weekForm').submit()">
+    {% for w in 1|to:53 %}
+      <option value="{{ w }}" {% if w == week %}selected{% endif %}>第 {{ w }} 周</option>
+    {% endfor %}
+  </select>
+</form>
+
+
+<!-- 图表 -->
+<canvas id="weeklyChart"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+new Chart(document.getElementById('weeklyChart').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: {{ labels|safe }},
+    datasets: [
+      {
+        label: '完成数',
+        data: {{ completed_data|safe }},
+        backgroundColor: 'rgba(54, 162, 235, 0.6)'
+      },
+      {
+        label: '错误数',
+        data: {{ error_data|safe }},
+        backgroundColor: 'rgba(255, 99, 132, 0.6)'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: { y: { beginAtZero: true } }
+  }
+});
+</script>
+{% endblock %}

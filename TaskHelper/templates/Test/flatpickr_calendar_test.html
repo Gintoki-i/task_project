@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Flatpickr 测试</title>
+
+  <!-- Flatpickr 样式 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    body { padding: 40px; font-family: sans-serif; }
+    #calendar { border: 1px solid #ccc; padding: 10px; max-width: 300px; }
+  </style>
+</head>
+<body>
+  <h2>📅 Flatpickr 嵌入日历测试</h2>
+
+  <div id="calendar"></div>
+
+  <p class="mt-3">
+    <label>当前选中日期：</label>
+    <input type="text" id="selected-date" readonly>
+  </p>
+
+  <!-- Flatpickr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      flatpickr("#calendar", {
+        inline: true,
+        locale: "zh",
+        dateFormat: "Y-m-d",
+        mode: "multiple",
+        defaultDate: ["2025-06-01"],
+        onChange: function(selectedDates) {
+          if (selectedDates.length > 0) {
+            const latest = selectedDates[selectedDates.length - 1].toISOString().split('T')[0];
+            document.getElementById("selected-date").value = latest;
+          }
+        },
+        onReady: function(_, __, fp) {
+          const highlight = ["2025-06-01", "2025-06-03"];
+          highlight.forEach(d => {
+            const el = fp.calendarContainer.querySelector(`[aria-label="${d}"]`);
+            if (el) el.style.backgroundColor = '#d1e7dd';
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+{% extends 'TaskHelper/base.html' %}
+{% load static %}
+{% load dict_filters %}
+
+{% block title %}任务统计报告{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">📋 任务汇总与明细</h3>
+
+<!-- ✅ 明细记录（支持行内编辑 + 批量保存 + 批量删除） -->
+<form id="batchForm" method="post" action="{% url 'batch_update_tasks' %}">
+  {% csrf_token %}
+
+  <div class="table-responsive mb-3">
+    <h5 class="mb-3">📄 明细记录列表</h5>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-success">📥 批量保存所选</button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="deleteSelected()">🗑 批量删除所选</button>
+        <a href="?export=csv" class="btn btn-outline-primary btn-sm">📤 导出 CSV</a>
+
+    </div>
+  <br>
+    <table class="table table-bordered table-sm table-hover text-center">
+      <thead class="table-light">
+        <tr>
+          <th><input type="checkbox" id="selectAll" onclick="toggleAll()"></th>
+          <th>姓名</th>
+          <th>日期</th>
+          <th>完成</th>
+          <th>错误</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in detail_rows %}
+        <tr>
+          <td><input type="checkbox" name="task_ids" value="{{ r.id }}"></td>
+          <td>{{ r.employee.name }}</td>
+          <td>{{ r.date }}</td>
+          <td>
+            <input type="number" name="completed_{{ r.id }}" value="{{ r.completed }}" class="form-control form-control-sm text-center" onchange="autoSave({{ r.id }})">
+          </td>
+          <td>
+            <input type="number" name="errors_{{ r.id }}" value="{{ r.errors }}" class="form-control form-control-sm text-center" onchange="autoSave({{ r.id }})">
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-muted">暂无记录</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</form>
+
+<!-- ✅ 透视汇总表 -->
+<div class="table-responsive mb-5">
+  <h5 class="mb-3">📊 透视汇总表（按日期）</h5>
+  <table class="table table-bordered table-sm table-hover align-middle">
+    <thead class="table-light text-center">
+      <tr>
+        <th>日期</th>
+        <th>姓名</th>
+        <th>目标数</th>
+        <th>完成数</th>
+        <th>错误数</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for day, records in grouped.items %}
+        {% with row_count=records|length summary_day=summary|dict_get:day %}
+          {% for record in records %}
+          <tr class="text-center">
+            {% if forloop.first %}
+            <td rowspan="{{ row_count|add:'1' }}" class="align-middle fw-bold">{{ day }}</td>
+            {% endif %}
+            <td>{{ record.employee.name }}</td>
+            <td>40</td>
+            <td>{{ record.completed }}</td>
+            <td>{{ record.errors }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="table-secondary text-center fw-bold">
+            <td >小计</td>
+            <td>{{ summary_day.target }}</td>
+            <td>{{ summary_day.completed }}</td>
+            <td>{{ summary_day.errors }}</td>
+          </tr>
+        {% endwith %}
+      {% endfor %}
+      <tr class="table-primary text-center fw-bold">
+        <td colspan="2">总计</td>
+        <td>{{ total_target }}</td>
+        <td>{{ total_completed }}</td>
+        <td>{{ total_errors }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+{% block extrascript %}
+<script>
+  function toggleAll() {
+    const master = document.getElementById('selectAll');
+    document.querySelectorAll('input[name="task_ids"]').forEach(box => {
+      box.checked = master.checked;
+    });
+  }
+
+  function autoSave(taskId) {
+    const completed = document.querySelector(`[name="completed_${taskId}"]`).value;
+    const errors = document.querySelector(`[name="errors_${taskId}"]`).value;
+
+    fetch(`/task/${taskId}/edit-inline/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        completed: completed,
+        errors: errors
+      })
+    }).then(res => {
+      if (!res.ok) alert("自动保存失败");
+    });
+  }
+
+  function deleteSelected() {
+    const selected = Array.from(document.querySelectorAll('input[name="task_ids"]:checked'))
+                          .map(input => input.value);
+    if (selected.length === 0) {
+      alert("请先选择要删除的记录");
+      return;
+    }
+
+    if (!confirm(`确认删除 ${selected.length} 条记录？`)) return;
+
+    fetch("{% url 'delete_task_batch' %}", {
+      method: "POST",
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids: selected })
+    }).then(res => {
+      if (res.ok) location.reload();
+      else alert("删除失败");
+    });
+  }
+</script>
+{% endblock %}

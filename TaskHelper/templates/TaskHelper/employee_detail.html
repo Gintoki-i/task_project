@@ -1,0 +1,179 @@
+{% extends 'TaskHelper/base.html' %}
+{% load static %}
+
+{% block title %}员工详情{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">首页</a></li>
+{#    <li class="breadcrumb-item"><a href="{% url 'weekly_ranking' %}">周排行</a></li>#}
+    <li class="breadcrumb-item active" aria-current="page">{{ employee.name }}</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+  <div class="card-body d-flex align-items-center gap-3">
+    <img src="{{ employee.get_avatar_url }}" class="rounded-circle" width="80" height="80">
+    <div>
+      <h4 class="mb-0">{{ employee.name }}</h4>
+      <small class="text-muted">员工编号：{{ employee.id }}</small>
+    </div>
+  </div>
+</div>
+
+<h5 class="mt-4">📅 每日完成情况</h5>
+<table class="table table-bordered table-hover mt-2">
+  <thead class="table-light">
+    <tr>
+      <th>日期</th>
+      <th>完成数</th>
+      <th>错误数</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for record in records %}
+      <tr class="{% if record.errors > 5 %}table-danger{% elif record.completed >= 160 %}table-success{% endif %}">
+        <td>{{ record.date }}</td>
+        <td>{{ record.completed }}</td>
+        <td>{{ record.errors }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="3" class="text-center">暂无记录</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h5 class="mt-5">📊 热力图视图切换</h5>
+<div class="btn-group mb-3" role="group">
+  <button class="btn btn-outline-primary" onclick="showHeatmap('month')">按月</button>
+  <button class="btn btn-outline-secondary" onclick="showHeatmap('week')">按周</button>
+</div>
+
+<div id="monthDayHeatmap" style="width: 100%; height: 480px; display: block;"></div>
+<div id="weekDayHeatmap" style="min-width: 1000px; height: 600px; display: none;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+function showHeatmap(type) {
+  document.getElementById('monthDayHeatmap').style.display = type === 'month' ? 'block' : 'none';
+  document.getElementById('weekDayHeatmap').style.display = type === 'week' ? 'block' : 'none';
+
+  const chart = echarts.getInstanceByDom(
+    document.getElementById(type === 'month' ? 'monthDayHeatmap' : 'weekDayHeatmap')
+  );
+  if (chart) chart.resize();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const monthChart = echarts.init(document.getElementById('monthDayHeatmap'));
+  monthChart.setOption({
+    tooltip: {},
+    visualMap: {
+      min: 0,
+      max: 200,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 30,
+      inRange: {
+        color: ['#fef0d9', '#fdcc8a', '#fc8d59', '#d7301f']
+      }
+    },
+    grid: {
+      top: 60,
+      bottom: 100,
+      left: 80,
+      right: 40,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      name: '日',
+      axisLabel: { fontSize: 14 },
+      data: Array.from({length: 31}, (_, i) => (i + 1).toString()),
+      splitArea: { show: true }
+    },
+    yAxis: {
+      type: 'category',
+      name: '月',
+      axisLabel: { fontSize: 14 },
+      data: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+      splitArea: { show: true }
+    },
+    series: [{
+      name: '完成数',
+      type: 'heatmap',
+      data: {{ month_day_heatmap_data|safe }},
+      label: { show: false },
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowColor: 'rgba(0,0,0,0.5)'
+        }
+      }
+    }]
+  });
+
+  const weekChart = echarts.init(document.getElementById('weekDayHeatmap'));
+  weekChart.setOption({
+    tooltip: {},
+    visualMap: {
+      min: 0,
+      max: 200,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 30,
+      inRange: {
+        color: ['#e0f3f8', '#74add1', '#4575b4']
+      }
+    },
+    grid: {
+      top: 60,
+      bottom: 100,
+      left: 100,
+      right: 40,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      name: '星期',
+      min: 0,
+      max: 6,
+      axisLabel: {
+        fontSize: 14,
+        interval: 0,
+        formatter: function (val) {
+          const map = { '1': '一', '2': '二', '3': '三', '4': '四', '5': '五', '6': '六', '7': '日' };
+          return '周' + map[val];
+        }
+      },
+      data: ['1','2','3','4','5','6','7'],
+      splitArea: { show: true }
+    },
+    yAxis: {
+      type: 'category',
+      name: '周',
+      axisLabel: { fontSize: 14 },
+      data: {{ week_day_labels|safe }},
+      splitArea: { show: true }
+    },
+    series: [{
+      name: '完成数',
+      type: 'heatmap',
+      data: {{ week_day_heatmap_data|safe }},
+      label: { show: false },
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowColor: 'rgba(0,0,0,0.5)'
+        }
+      }
+    }]
+  });
+});
+</script>
+{% endblock %}
